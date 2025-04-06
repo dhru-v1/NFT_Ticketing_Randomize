@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ABC Event - Home</title>
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        .container { max-width: 800px; margin: auto; text-align: center; padding: 30px; }
+        .info-box { display: flex; justify-content: space-between; margin-top: 20px; }
+        .counter, .tickets-left { font-size: 1.2rem; }
+        .ticket-selector { margin: 30px 0; }
+        .ticket-count { font-size: 2rem; margin: 10px 0; }
+        .arrow-btn { font-size: 1.5rem; margin: 0 10px; cursor: pointer; }
+        .pay-btn { background-color: green; color: white; padding: 10px 20px; border: none; cursor: pointer; font-size: 1.2rem; }
+        .show-ticket-btn { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to ABC Event</h1>
+
+        <div class="info-box">
+            <div class="counter">Time Left: <span id="time-left">--:--:--</span></div>
+            <div class="tickets-left">Tickets Left: <span id="tickets-left">500</span></div>
+        </div>
+
+        <div class="ticket-selector">
+            <h2>Purchase Tickets</h2>
+            <div>
+                <span class="arrow-btn" onclick="changeCount(-1)">&#9660;</span>
+                <span class="ticket-count" id="ticket-count">0</span>
+                <span class="arrow-btn" onclick="changeCount(1)">&#9650;</span>
+            </div>
+            <button class="pay-btn" onclick="payNow()">&#8377; PAY</button>
+        </div>
+
+        <div class="show-ticket-btn">
+            <a href="/ticket"><button>Show Ticket</button></a>
+        </div>
+    </div>
+    <script src="/script.js"></script>
+</body>
+</html>

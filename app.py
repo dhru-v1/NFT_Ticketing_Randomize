@@ -1,50 +1,109 @@
-from flask import Flask , session , redirect , render_template , url_for , request
-from flask_pymongo import PyMongo
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory
+import os
+from werkzeug.security import generate_password_hash, check_password_hash
+from pymongo import MongoClient
+import datetime
 
-app = Flask(__name__)
-app.config['MONGO_URI'] = 'mongodb://localhost:27017/myDatabase'
-app.secret_key='test'
+app = Flask(__name__, template_folder='templates')
 
-mongo = PyMongo(app)
+app.secret_key = os.urandom(24)
 
-@app.route("/")
-def home():
-    if "username" in session:
-        username = session['username']
-        return render_template('home.html',username=username)
-    return redirect(url_for("login"))
+try:
+    client = MongoClient('mongodb://localhost:27017/')
+    db = client['user_auth_db']
+    users_collection = db['users']
+    users_collection.create_index('username', unique=True)
+    
+    print("Connected to MongoDB successfully!")
+except Exception as e:
+    print(f"Error connecting to MongoDB: {e}")
 
-@app.route("/login", methods= ['POST','GET'])
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/login', methods=['POST'])
 def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        user = mongo.db.inventory.find_one({'username': username})
-        if user and user['password'] == password:
-            session['username'] = username
-            return redirect(url_for('home'))
-        return redirect(url_for('login'))
-    return render_template("login.html")
+    username = request.form.get('username')
+    password = request.form.get('password')
+    
+    if not username or not password:
+        flash('Please enter both username and password.')
+        return redirect('/')
+    
+    user = users_collection.find_one({'username': username})
+    
+    if not user:
+        flash('Username not found. Please register first.')
+        return redirect('/')
+    
+    if check_password_hash(user['password'], password):
+        session['logged_in'] = True
+        session['username'] = username
+        return redirect('/home')
+    
+    else:
+        flash('Incorrect password. Please try again.')
+        return redirect('/')
 
-@app.route("/register", methods = ['POST','GET'])
+@app.route('/register', methods=['POST'])
 def register():
-    if request.method == 'POST':
-        email = request.form('email')
-        username = request.form('username')
-        password = request.form('password')
-        if mongo.db.inevtory.find_one({'email': email}):
-            return redirect(url_for(register))
-        if mongo.db.inventory.find_one({'username': username}):
-            return redirect(url_for(register))
-        mongo.db.inventory.insert_one({'email': email,'username': username,'password':password,'role':'user'})
-        return redirect(url_for('login'))
-    return render_template('register.html')
-@app.route("/logout")
-def logout():
-    session.pop("username")
-    return redirect(url_for("login"))
+    username = request.form.get('username')
+    email = request.form.get('email')
+    password = request.form.get('password')
+    
+    if not username or not email or not password:
+        flash('Please fill out all fields.')
+        return redirect('/')
+    
+    # Check if username already exists
+    existing_user = users_collection.find_one({'username': username})
+    if existing_user:
+        flash('Username already exists. Please choose another one.')
+        return redirect('/')
+    
+    # Hash the password for security
+    hashed_password = generate_password_hash(password)
+    
+    # Create user document
+    new_user = {
+        'username': username,
+        'email': email,
+        'password': hashed_password,
+        'created_at': datetime.datetime.now()
+    }
+    
+    # Insert user into MongoDB
+    try:
+        users_collection.insert_one(new_user)
+        flash('Registration successful! Please log in.')
+    except Exception as e:
+        flash(f'An error occurred during registration: {str(e)}')
+    
+    return redirect('/')
 
-if __name__ == "__main__":
+@app.route('/home')
+def home():
+    if 'logged_in' not in session:
+        flash('Please log in first.')
+        return redirect('/')
+    return render_template('home.html')
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('You have been logged out.')
+    return redirect('/')
+
+# Serve static files (JS and CSS)
+@app.route('/style.css')
+def serve_css():
+    return send_from_directory('templates', 'style.css')
+
+@app.route('/script.js')
+def serve_js():
+    return send_from_directory('templates', 'script.js')
+
+if __name__ == '__main__':
     app.run(debug=True)
-    if not mongo.db.inventory.find_one({'username':'dhruv'}):
-        mongo.db.inventory.insert_one({'email':'dhruv08157@gmail.com','username': 'dhruv','password':'2588','role':'admin'})
